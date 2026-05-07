@@ -128,9 +128,29 @@ func MeHandler(w http.ResponseWriter, r *http.Request) {
                 return
         }
 
+        authHeader := r.Header.Get("Authorization")
+        if authHeader == "" {
+                http.Error(w, "authorization header required", http.StatusUnauthorized)
+                return
+        }
+
+        const prefix = "Bearer "
+        if !strings.HasPrefix(authHeader, prefix) {
+                http.Error(w, "invalid authorization header", http.StatusUnauthorized)
+                return
+        }
+
+        tokenString := strings.TrimPrefix(authHeader, prefix)
+
+        userID, email, err := service.ParseJWT(tokenString)
+        if err != nil {
+                http.Error(w, "invalid token", http.StatusUnauthorized)
+                return
+        }
+
         w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(map[string]string{
-                "message": "authenticated user endpoint",
-                "status":  "ok",
+        json.NewEncoder(w).Encode(map[string]interface{}{
+                "id":    userID,
+                "email": email,
         })
 }
